@@ -1,4 +1,4 @@
-#include "Data.hpp"
+#include "BitcoinExchange.hpp"
 #include <exception>
 
 
@@ -17,22 +17,13 @@ int main(int argc, char **argv)
         std::map<std::string, float> exchange;
         if(argc != 2)
         {
-            throw std::invalid_argument("invalid number of arguments");    
+            throw std::invalid_argument("Error: invalid number of arguments");    
         }
         else
         {
-            std::stringstream sstring(argv[1]);
-            std::string key;
-            std::string val;
-            while (std::getline(sstring, key, '|'))
-            {
-                if(!std::getline(sstring, val))
-                    throw std::invalid_argument("bad input => " + key);
-            }
-            
+            BitcoinExchange db;
+            db.exchange(argv[1]);
         }
-        Data db;
-        std::cout << db.getVal("2009-01-02");
     }
     catch(const std::exception& e)
     {
