@@ -8,9 +8,10 @@ class BitcoinExchange
 {
     private:
         std::map<std::string, float> db;
-        std::map<std::string, float> input;
         void    trim(std::string& str);
         bool    handl_date(std::string& date);
+        void    calcul_exchange(float val, std::string key);
+        void    print_erro(std::string key);
     public:
         BitcoinExchange();
         BitcoinExchange(const BitcoinExchange& obj);
@@ -18,8 +19,6 @@ class BitcoinExchange
         ~BitcoinExchange();
 
         void    exchange(char *str);
-        
-        // void    load_input(char *str);
         float   getVal(std::string key);
         
 };

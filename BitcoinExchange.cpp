@@ -5,6 +5,11 @@ void    BitcoinExchange::trim(std::string& str)
     if(!str.empty())
     {
         std::size_t first = str.find_first_not_of(" \n\t\r");
+        if(first == std::string::npos)
+        {
+            str.clear();
+            return;
+        }
         std::size_t last = str.find_last_not_of(" \n\t\r");
         str = str.substr(first, last - first + 1);
     }
@@ -18,6 +23,7 @@ BitcoinExchange::BitcoinExchange()
         throw std::invalid_argument("Impossibl open the csv");
     }
     std::string line;
+    std::getline(file, line);
     while (std::getline(file, line))
     {
         std::stringstream stream_line(line);
@@ -60,7 +66,7 @@ float BitcoinExchange::getVal(std::string key)
         if(it != this->db.begin())
             it--;
         else
-            return 0;
+            return -1;
         return it->second;
     }
     return this->db[key];
@@ -70,29 +76,70 @@ bool    is_validDate(const std::string& date)
     std::stringstream dateStream(date);
     int y, m, d;
     char    t1, t2;
+    std::string last;
     if(!(dateStream >> y >> t1 >> m >> t2 >> d))
         return false;
-    if(y < 0 || m < 1 || m > 12 || d < 1 || d > 31)
+    if(y < 0 || m < 1 || m > 12 || d < 1 || d > 31 || t1 != '-' || t2 != '-')
         return false;
+    if((m == 4 || m == 6 || m == 9 || m == 11) && d > 30)
+        return false;
+    if(m == 2)
+    {
+        int max = 28;
+        if(!(y % 400) || (!(y % 4) && (y % 100)))
+            max = 29;
+        if(d > max)
+            return false;
+    }
     return true;
 }
 bool    BitcoinExchange::handl_date(std::string& date)
 {
     std::stringstream dateStream(date);
     std::string y, m, d;
-    char    t1, t2;
-    std::cout << date << std::endl;
-    if(!(dateStream >> y >> t1 >> m >> t2 >> d))
+    if(!is_validDate(date))
         return false;
+    if(!std::getline(dateStream, y, '-') || !std::getline(dateStream, m, '-') || !std::getline(dateStream, d))
     trim(y);
     trim(m);
     trim(d);
-    if(m.size() != 2 || d.size() != 2 || t1 != '-' || t2 != '-')
+    if(m.size() != 2 || d.size() != 2)
         return false;
-    if(!is_validDate(date))
-        return false;
-    date = y + t1 + m + t2 + d;
+    
+    date = y + "-" + m + "-" + d;
     return true;
+}
+
+void    BitcoinExchange::print_erro(std::string key)
+{
+    std::cerr << "Error: bad input";
+    if(!key.empty())
+        std::cout << " => " << key;
+    std::cout << std::endl;
+}
+
+void    BitcoinExchange::calcul_exchange(float val, std::string key)
+{
+    if(val < 0)
+        std::cerr << "Error: not a positive number." << std::endl;
+    else if(val > 1000)
+        std::cerr << "Error: too large a number." << std::endl;
+    else
+    {
+        float exchangeVal = this->getVal(key);
+        if(exchangeVal < 0)
+        {
+            std::cerr << "Error: bad input";
+            if(!key.empty())
+                std::cout << " => " << key;
+            std::cout << std::endl;
+        }
+        else
+        {
+            exchangeVal *= val;
+            std::cout << key << " => " << val << " = " << exchangeVal << std::endl;
+        }
+    }
 }
 
 void    BitcoinExchange::exchange(char *str)
@@ -106,39 +153,37 @@ void    BitcoinExchange::exchange(char *str)
     std::getline(file, line);
     while (std::getline(file, line))
     {
-        std::cout << line << std::endl;
         std::stringstream lineStream(line);
         std::string key;
         float val;
-        if(std::getline(lineStream, key, '|'))
+        std::string    other;
+        if(line.empty())
+            continue;
+        else if(std::getline(lineStream, key, '|'))
         {
             if(handl_date(key))
             {
                 if(lineStream >> val)
                 {
-                    if(val < 0)
-                        std::cerr << "Error: not a positive number." << std::endl;
-                    else if(val > 1000)
-                        std::cerr << "Error: too large a number." << std::endl;
+                    if(std::getline(lineStream, other))
+                    {
+                        trim(other);
+                        if(!other.empty())
+                            this->print_erro(key);
+                        else
+                            this->calcul_exchange(val, key);
+                    }
                     else
-                        this->input[key] = val;
+                        this->calcul_exchange(val, key);
                 }
                 else
-                    std::cerr << "Error: invalide argument";
-                
+                    this->print_erro(key);
             }
             else
-                std::cerr << "Error: bad input => " << key << std::endl;
+                this->print_erro(key);
         }
         else
-            std::cerr << "Error: bad input => " << key << std::endl;
-    }
-    float exchange;
-    std::map<std::string, float>::iterator it;
-    for (it = this->input.begin(); it != this->input.end(); ++it)
-    {
-        exchange = it->second * getVal(it->first);
-        std::cout << it->first << " => " << getVal(it->first) << " = " << exchange << std::endl;
+            this->print_erro(key);
     }
     
 }

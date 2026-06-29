@@ -78,8 +78,23 @@ int main(int argc, char** argv) {
     //     std::cout << "Error" << std::endl;
     // }
 
-    int n = 8;
-    if(kherya(n))
-        std::cout << n << std::endl;
+    std::ifstream file("input.txt");
+    if(file.is_open())
+    {
+        std::string line;
+    std::stringstream linestream;
+    int a; 
+    while (getline(file, line))
+    {
+        linestream.str(line);
+        if(!(linestream >> a))
+            std::cout << "Error" << std::endl;
+        else
+            std::cout << a << std::endl;
+        linestream.clear();
+    }
+    }
+    
+    
     return 0;
 }
